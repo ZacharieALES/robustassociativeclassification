@@ -104,6 +104,66 @@ function createFeatures(dataFolder::String, dataSet::String)
             features.al = ifelse.(rawData.al .== "0", 0, 1)
 
         end 
+		
+		if dataSet == "heart"
+			features.Class = ifelse.(rawData.Class .== 1, 0, 1)
+			createColumns(:Age, [0,35,50, Inf], rawData, features)
+			features.Sex = rawData.Sex
+			
+			# Add columns related to the Chest Pain type
+            # -> 4 columns (type 1, type 2, type 3 and type 4)
+            
+            # For each existing value in the column "ChestPainType
+            for a in sort(unique(rawData.ChestPainType))
+
+                # Create 1 feature column named "ChestPainType1", "ChestPainType2", "ChestPainType3" or "ChestPainType4"
+                features[!, Symbol("ChestPainType", a)] = ifelse.(rawData.ChestPainType .== a, 1, 0)
+            end
+			createColumns(:RestingBloodPressure, [0, 120, 140, 160, 180, Inf], rawData, features)
+			createColumns(:SerumCholestoral, [0, 200, 240, Inf], rawData, features)
+			features.FastingBloodSugar = ifelse.(rawData.FastingBloodSugar .> 120, 1, 0)
+			
+			# Add columns related to the Resting Electrocardiographic Results
+            # -> 3 columns (RestingECG1, RestingECG2 and RestingECG3)
+            
+			# For each existing value in the column "RestingECGResults"
+            for a in sort(unique(rawData.RestingECGResults))
+
+                # Create 1 feature column named "Class1", "Class2" or "Class3"
+                features[!, Symbol("RestingECG", a)] = ifelse.(rawData.RestingECGResults .== a, 1, 0)
+            end
+			
+			createColumns(:MaximumHeartRate, [0, 150, 170, 160, 180, Inf], rawData, features)
+			features.ExerciseInducedAngina = rawData.ExerciseInducedAngina
+			createColumns(:Oldpeak, [0, 0.8, 1.8, 6.8], rawData, features)
+			
+			# Add columns related to the slope of the peak exercise ST segment
+            # -> 3 columns (STSlope1, STSlope2 and STSlope3)
+            
+			# For each existing value in the column "STSlope"
+            for a in sort(unique(rawData.STSlope))
+
+                # Create 1 feature column named "Class1", "Class2" or "Class3"
+                features[!, Symbol("STSlope", a)] = ifelse.(rawData.STSlope .<= a, 1, 0)
+            end
+			
+			# Add columns related to the number of major vessels (0-3) colored by flourosopy
+            # -> 3 columns (MajorVessels1, MajorVessels2 and MajorVessels3)
+            
+			# For each existing value in the column "MajorVesselsNumber"
+            for a in sort(unique(rawData.MajorVesselsNumber))
+
+                # Create 1 feature column named "Class1", "Class2" or "Class3"
+                features[!, Symbol("MajorVessels", a)] = ifelse.(rawData.MajorVesselsNumber .<= a, 1, 0)
+            end
+			
+			# Add columns related to the thal
+            # -> 3 columns (normal, fixed defect, reversable defect)
+   			features[!, Symbol("NormalThal")] = ifelse.(rawData.Thal .== 3, 1, 0)
+			features[!, Symbol("FixedDefectThal")] = ifelse.(rawData.Thal .== 6, 1, 0)
+            features[!, Symbol("ReversableDefectThal")] = ifelse.(rawData.Thal .== 7, 1, 0)
+		end
+		
         
         if dataSet == "other"
             #TODO
