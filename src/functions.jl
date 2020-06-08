@@ -77,21 +77,21 @@ function createFeatures(dataFolder::String, dataSet::String)
             # Detailed description of the command:
             # - create in DataFrame "features" a column named "Sex"
             # - for each row of index i of "rawData", if column "Sex" is equal to "female", set the value of column "Sex" in row i of features to 1; otherwise set it to 0
-            features.Sex = ifelse.(rawData.Sex .== "female", 1, 0)
+            #features.Sex = ifelse.(rawData.Sex .== "female", 1, 0)
             
             # Add columns related to the passenger class
             # -> 3 columns (class 1, class 2 and class 3)
             
             # For each existing value in the column "Pclass"
-            for a in sort(unique(rawData.Pclass))
+            #for a in sort(unique(rawData.Pclass))
 
                 # Create 1 feature column named "Class1", "Class2" or "Class3"
-                features[!, Symbol("Class", a)] = ifelse.(rawData.Pclass .<= a, 1, 0)
-            end
+                #features[!, Symbol("Class", a)] = ifelse.(rawData.Pclass .<= a, 1, 0)
+            #end
 
             # Add a column related  to the number of relatives
             # -> 1 column (0: no relatives, 1: at least one relative)
-            features.Relative = ifelse.(rawData[!, Symbol("Siblings/Spouses Aboard")] + rawData[!, Symbol("Parents/Children Aboard")] .> 0, 1, 0)
+            #features.Relative = ifelse.(rawData[!, Symbol("Siblings/Spouses Aboard")] + rawData[!, Symbol("Parents/Children Aboard")] .> 0, 1, 0)
 
 
         end
@@ -119,7 +119,8 @@ function createFeatures(dataFolder::String, dataSet::String)
                 # Create 1 feature column named "ChestPainType1", "ChestPainType2", "ChestPainType3" or "ChestPainType4"
                 features[!, Symbol("ChestPainType", a)] = ifelse.(rawData.ChestPainType .== a, 1, 0)
             end
-			createColumns(:RestingBloodPressure, [0, 120, 140, 160, 180, Inf], rawData, features)
+			#createColumns(:RestingBloodPressure, [0, 120, 140, 160, 180, Inf], rawData, features)
+			createColumns(:RestingBloodPressure, [0,  120,  160, Inf], rawData, features)
 			createColumns(:SerumCholestoral, [0, 200, 240, Inf], rawData, features)
 			features.FastingBloodSugar = ifelse.(rawData.FastingBloodSugar .> 120, 1, 0)
 			
@@ -133,35 +134,36 @@ function createFeatures(dataFolder::String, dataSet::String)
                 features[!, Symbol("RestingECG", a)] = ifelse.(rawData.RestingECGResults .== a, 1, 0)
             end
 			
-			createColumns(:MaximumHeartRate, [0, 150, 170, 160, 180, Inf], rawData, features)
-			features.ExerciseInducedAngina = rawData.ExerciseInducedAngina
+			#createColumns(:MaximumHeartRate, [0, 150, 160, 170, 180, Inf], rawData, features)
+			createColumns(:MaximumHeartRate, [0, 160, 180, Inf], rawData, features)
+			#features.ExerciseInducedAngina = rawData.ExerciseInducedAngina
 			createColumns(:Oldpeak, [0, 0.8, 1.8, 6.8], rawData, features)
 			
 			# Add columns related to the slope of the peak exercise ST segment
             # -> 3 columns (STSlope1, STSlope2 and STSlope3)
             
 			# For each existing value in the column "STSlope"
-            for a in sort(unique(rawData.STSlope))
+            #for a in sort(unique(rawData.STSlope))
 
                 # Create 1 feature column named "Class1", "Class2" or "Class3"
-                features[!, Symbol("STSlope", a)] = ifelse.(rawData.STSlope .<= a, 1, 0)
-            end
+                #features[!, Symbol("STSlope", a)] = ifelse.(rawData.STSlope .<= a, 1, 0)
+            #end
 			
 			# Add columns related to the number of major vessels (0-3) colored by flourosopy
             # -> 3 columns (MajorVessels1, MajorVessels2 and MajorVessels3)
             
 			# For each existing value in the column "MajorVesselsNumber"
-            for a in sort(unique(rawData.MajorVesselsNumber))
+            #for a in sort(unique(rawData.MajorVesselsNumber))
 
                 # Create 1 feature column named "Class1", "Class2" or "Class3"
-                features[!, Symbol("MajorVessels", a)] = ifelse.(rawData.MajorVesselsNumber .<= a, 1, 0)
-            end
+                #features[!, Symbol("MajorVessels", a)] = ifelse.(rawData.MajorVesselsNumber .<= a, 1, 0)
+            #end
 			
 			# Add columns related to the thal
             # -> 3 columns (normal, fixed defect, reversable defect)
-   			features[!, Symbol("NormalThal")] = ifelse.(rawData.Thal .== 3, 1, 0)
-			features[!, Symbol("FixedDefectThal")] = ifelse.(rawData.Thal .== 6, 1, 0)
-            features[!, Symbol("ReversableDefectThal")] = ifelse.(rawData.Thal .== 7, 1, 0)
+   			#features[!, Symbol("NormalThal")] = ifelse.(rawData.Thal .== 3, 1, 0)
+			#features[!, Symbol("FixedDefectThal")] = ifelse.(rawData.Thal .== 6, 1, 0)
+            #features[!, Symbol("ReversableDefectThal")] = ifelse.(rawData.Thal .== 7, 1, 0)
 		end
 		
         
@@ -172,10 +174,22 @@ function createFeatures(dataFolder::String, dataSet::String)
         # Shuffle the individuals
         features = features[shuffle(1:size(features, 1)),:]
 
+		
+	
         # Split them between train and test
-        trainLimit = trunc(Int, size(features, 1) * 2/3)
-        train = features[1:trainLimit, :]
-        test = features[(trainLimit+1):end, :]
+		# Split them between train and test
+		featuresC0=features[features[:,1] .== 0, :]
+		featuresC1=features[features[:,1] .== 1, :]
+		LimitC0 = trunc(Int, size(featuresC0, 1) * 1/2)
+		LimitC1 = trunc(Int, size(featuresC1, 1) * 1/2)
+		if(mod(LimitC0,2) !=0)
+			LimitC0+=mod(LimitC0,2)
+		end
+		if(mod(LimitC1,2) !=0)
+			LimitC1+=mod(LimitC1,2)
+		end
+		train = vcat(featuresC0[1:LimitC0, :] , featuresC1[1:LimitC1, :])
+		test = vcat(featuresC0[(LimitC0+1):end, :] , featuresC1[(LimitC1+1):end, :])
         
         CSV.write(trainDataPath, train)
         CSV.write(testDataPath, test)
@@ -355,23 +369,42 @@ Arguments
 """
 function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.DataFrame, rules::DataFrames.DataFrame, tilim::Int64)
 
-    orderedRulesPath = resultsFolder * dataSet * "_ordered_rules.csv"
-
-    if !isfile(orderedRulesPath)
+    orderedRulesPath1 = resultsFolder * dataSet * "_ordered_rules1.csv"
+    orderedRulesPath2 = resultsFolder * dataSet * "_ordered_rules2.csv"
+    if !isfile(orderedRulesPath1) || !isfile(orderedRulesPath2)
 
         println("=== Sorting the rules")
-        
+		
+		#number of train data sets
+		nb=2
+		
+		#proximity approach
+		#approach=1
+		approach=2
+		
+		#Split the train into two sets
+		trainC0=train[train[:,1] .== 0, :]
+		trainC1=train[train[:,1] .== 1, :]
+		LimitC0 = trunc(Int, size(trainC0, 1) * 1/2)
+		LimitC1 = trunc(Int, size(trainC1, 1) * 1/2)
+		train1 = vcat(trainC0[1:LimitC0, :] , trainC1[1:LimitC1, :])
+		train2 = vcat(trainC0[(LimitC0+1):end, :] , trainC1[(LimitC1+1):end, :])
+		println("=== ... ", size(train1, 1), " train1")
+        println("=== ... ", size(train2, 1), " train2")
+    
         # Transactions
-        t = train[:, 2:end]
+        t1 = train1[:, 2:end]
+		t2 = train2[:, 2:end]
 
         # Class of the transactions
-        transactionClass = train[:, 1:1]
+        transactionClass1 = train1[:, 1:1]
+		transactionClass2 = train2[:, 1:1]
 
         # Number of features
-        d = size(t, 2)
+        d = size(t1, 2)
 
-        # Number of transactions
-        n = size(t, 1)
+        # Number of transactions in each train data set
+        n = size(t1, 1)
 
         # Add the two null rules in first position
         nullrules = similar(rules, 0)
@@ -388,34 +421,18 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
         Rrank = 1/L
 
         ################
-        # Compute the v_il and p_il constants
-        # p_il = :
+        # Compute the v^q_il and p^q_il constants
+        # for each train data set q , p^q_il = :
         #  0 if rule l does not apply to transaction i
         #  1 if rule l applies to transaction i and   correctly classifies it
         # -1 if rule l applies to transaction i and incorrectly classifies it
         ################
-        p = zeros(n, L)
-
-        # For each transaction and each rule
-        for i in 1:n
-            for l in 1:L
-
-                # If rule l applies to transaction i
-                # i.e., if the vector t_i - r_l does not contain any negative value
-                if !any(x->(x<-epsilon), [sum(t[i, k]-rules[l, k+1]) for k in 1:d])
-
-                    # If rule l correctly classifies transaction i
-                    if transactionClass[i, 1] == rules[l, 1]
-                        p[i, l] = 1
-                    else
-                        p[i, l] = -1 
-                    end
-                end
-            end
-        end
-
+		p = zeros(n, L, nb)
+		p[:, :, 1]=createPi(t1, rules, transactionClass1)
+		p[:, :, 2]=createPi(t2, rules, transactionClass2)
+		
         v = abs.(p)
-
+		
         ################
         # Create and solve the model
         ###############
@@ -423,64 +440,94 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
         m = Model(with_optimizer(CPLEX.Optimizer))
         set_parameter(m, "CPX_PARAM_TILIM", tilim)
         
-        # u_il: rule l is the highest which applies to transaction i
-        @variable(m, u[1:n, 1:L], Bin)
+        # u^q_il: rule l is the highest which applies to transaction i in train data set q
+        @variable(m, u[1:n, 1:L, 1:nb], Bin)
+		
+        # r^q_l: rank of rule l in train data set q
+        @variable(m, 1 <= r[1:L, 1:nb] <= L, Int)
 
-        # r_l: rank of rule l
-        @variable(m, 1 <= r[1:L] <= L, Int)
+        # rstar^q: rank of the highest null rule in train data set q
+        @variable(m, 1 <= rstar[1:nb] <= L)
+        @variable(m, 1 <= rB[1:nb] <= L)
 
-        # rstar: rank of the highest null rule
-        @variable(m, 1 <= rstar <= L)
-        @variable(m, 1 <= rB <= L)
+        # g^q_i: rank of the highest rule which applies to transaction i in train data set q
+        @variable(m, 1 <= g[1:n, 1:nb] <= L, Int)
+		
+        # s^q_lk: rule l is assigned to rank k in train data set q
+        @variable(m, s[1:L, 1:L,1:nb], Bin)
+		
+		
+        # Rank of null rules in each train data set q
+        rA = r[1, :]
+        rB = r[2, :]
 
-        # g_i: rank of the highest rule which applies to transaction i
-        @variable(m, 1 <= g[1:n] <= L, Int)
 
-        # s_lk: rule l is assigned to rank k
-        @variable(m, s[1:L,1:L], Bin)
+        # rstar^q == rB^q?
+        @variable(m, alpha[1:nb], Bin)
+		
+        # rstar^q == rA^q?
+        @variable(m, 0 <= beta[1:nb] <= 1)
 
-        # Rank of null rules
-        rA = r[1]
-        rB = r[2]
+        # Maximize the classification accuracy for each train data set q
+        @objective(m, Max, sum(p[i, l, 1] * u[i, l, 1] for i in 1:n for l in 1:L)
+                   + Rrank * rstar[1] + sum(p[i, l, 2] * u[i, l, 2] for i in 1:n for l in 1:L)
+                   + Rrank * rstar[2])
 
-        # rstar == rB?
-        @variable(m, alpha, Bin)
-
-        # rstar == rA?
-        @variable(m, 0 <= beta <= 1)
-
-        # Maximize the classification accuracy
-        @objective(m, Max, sum(p[i, l] * u[i, l] for i in 1:n for l in 1:L)
-                   + Rrank * rstar)
-
-        # Only one rule is the highest which applies to transaction i
-        @constraint(m, [i in 1:n], sum(u[i, l] for l in 1:L) == 1)
-
+        # For each train data set q, Only one rule is the highest which applies to transaction i
+        @constraint(m, [i in 1:n, q in 1:nb], sum(u[i, l, q] for l in 1:L) == 1)
+		
+		
         # g constraints
-        @constraint(m, [i in 1:n, l in 1:L], g[i] >= v[i, l] * r[l])
-        @constraint(m, [i in 1:n, l in 1:L], g[i] <= v[i, l] * r[l] + L * (1 - u[i, l]))
-
+        @constraint(m, [i in 1:n, l in 1:L, q in 1:nb], g[i, q] >= v[i, l, q] * r[l, q])
+        @constraint(m, [i in 1:n, l in 1:L, q in 1:nb], g[i, q] <= v[i, l, q] * r[l, q] + L * (1 - u[i, l, q]))
+		
         # Relaxation improvement
-        @constraint(m, [i in 1:n, l in 1:L], u[i, l] >= 1 - g[i] + v[i, l] * r[l])
-        @constraint(m, [i in 1:n, l in 1:L], u[i, l] <= v[i, l]) 
-
+        @constraint(m, [i in 1:n, l in 1:L, q in 1:nb], u[i, l, q] >= 1 - g[i, q] + v[i, l, q] * r[l, q])
+        @constraint(m, [i in 1:n, l in 1:L, q in 1:nb], u[i, l, q] <= v[i, l, q]) 
+		
         # r constraints
-        @constraint(m, [k in 1:L], sum(s[l, k] for l in 1:L) == 1)
-        @constraint(m, [l in 1:L], sum(s[l, k] for k in 1:L) == 1)
-        @constraint(m, [l in 1:L], r[l] == sum(k * s[l, k] for k in 1:L))
+        @constraint(m, [k in 1:L, q in 1:nb], sum(s[l, k, q] for l in 1:L) == 1)
+        @constraint(m, [l in 1:L, q in 1:nb], sum(s[l, k, q] for k in 1:L) == 1)
+        @constraint(m, [l in 1:L, q in 1:nb], r[l, q] == sum(k * s[l, k, q] for k in 1:L))
+	
 
         # rstar constraints
-        @constraint(m, rstar >= rA)
-        @constraint(m, rstar >= rB)
-        @constraint(m, rstar - rA <= (L-1) * alpha)
-        @constraint(m, rA - rstar <= (L-1) * alpha)
-        @constraint(m, rstar - rB <= (L-1) * beta)
-        @constraint(m, rB - rstar <= (L-1) * beta)
-        @constraint(m, alpha + beta == 1)
+        @constraint(m, [q in 1:nb], rstar[q] >= rA[q])
+        @constraint(m, [q in 1:nb], rstar[q] >= rB[q])
+        @constraint(m, [q in 1:nb], rstar[q] - rA[q] <= (L-1) * alpha[q])
+        @constraint(m, [q in 1:nb], rA[q] - rstar[q] <= (L-1) * alpha[q])
+        @constraint(m, [q in 1:nb], rstar[q] - rB[q] <= (L-1) * beta[q])
+        @constraint(m, [q in 1:nb], rB[q] - rstar[q] <= (L-1) * beta[q])
+        @constraint(m, [q in 1:nb], alpha[q] + beta[q] == 1)
+		
+		
 
-        # u_il == 0 if rstar > rl (also improve relaxation)
-        @constraint(m, [i in 1:n, l in 1:L], u[i, l] <= 1 - (rstar - r[l])/ (L - 1))
-
+        # u^q_il == 0 if rstar^q > r^q_l (also improve relaxation)
+        @constraint(m, [i in 1:n, l in 1:L, q in 1:nb], u[i, l, q] <= 1 - (rstar[q] - r[l, q])/ (L - 1))
+		
+		
+		
+		#Proximity of two lists r1 and r2
+		    
+		if(approach == 1)
+			#First approach
+			@variable(m, x1[1:L, 1:L], Bin)
+			@variable(m, x2[1:L, 1:L], Bin)
+			@variable(m, x[1:L, 1:L], Bin)
+			@constraint(m, [i in 1:L, j in 1:L], x1[i, j] * L >= r[j, 1]-r[i, 1])
+			@constraint(m, [i in 1:L, j in 1:L], x2[i, j] * L >= r[j, 2]-r[i, 2])
+			@constraint(m, [i in 1:L, j in 1:L], x[i, j] >= x1[i, j] + x2[i, j]-1)
+			@constraint(m, [i in 1:L, j in 1:L], x[i, j] <= x1[i, j] )
+			@constraint(m, [i in 1:L, j in 1:L], x[i, j] <= x2[i, j] )
+			@constraint(m, sum(x[i, j] for i in 1:L for j in 1:L) <= 2 * L)
+		else
+			#Second approach
+			@variable(m, 0 <= y[1:L] <= L-1, Int)
+			@constraint(m, [i in 1:L], y[i]  >= r[i, 1]-r[i, 2])
+			@constraint(m, [i in 1:L], y[i]  >= r[i, 2]-r[i, 1])
+			@constraint(m, sum(y[i] for i in 1:L ) <= 2 * L)
+		end
+			
         status = optimize!(m)
 
         ###############
@@ -489,25 +536,67 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
 
         # Number of rules kept in the classifier
         # (all the rules ranked lower than rstar are removed)
-        relevantNbOfRules=L-trunc(Int, JuMP.value(rstar))+1
+        relevantNbOfRules1=L-trunc(Int, JuMP.value(rstar[1]))+1
+		relevantNbOfRules2=L-trunc(Int, JuMP.value(rstar[2]))+1
 
         # Sort the rules and their class by decreasing rank
-        rulesOrder = JuMP.value.(r)
-        orderedRules = rules[sortperm(L.-rulesOrder), :]
-
-        orderedRules = orderedRules[1:relevantNbOfRules, :]
-
-        CSV.write(orderedRulesPath, orderedRules)
+        rulesOrder1 = JuMP.value.(r[:, 1])
+		rulesOrder2 = JuMP.value.(r[:, 2])
+        orderedRules1 = rules[sortperm(L.-rulesOrder1), :]
+		orderedRules2 = rules[sortperm(L.-rulesOrder2), :]
+		
+        orderedRules1 = orderedRules1[1:relevantNbOfRules1, :]
+		orderedRules2 = orderedRules2[1:relevantNbOfRules2, :]
+		
+        CSV.write(orderedRulesPath1, orderedRules1)
+		CSV.write(orderedRulesPath2, orderedRules2)
 
     else
         println("=== Warning: Sorted rules found, sorting of the rules skipped")
         println("=== Loading the sorting rules")
-        orderedRules = CSV.read(orderedRulesPath)
+        orderedRules1 = CSV.read(orderedRulesPath1)
+		orderedRules2 = CSV.read(orderedRulesPath2)
     end 
 
-    return orderedRules
+    #return orderedRules
 
 end
+
+
+function createPi(t::DataFrames.DataFrame, rules::DataFrames.DataFrame, transactionClass::DataFrames.DataFrame)
+
+	# Number of features
+    d::Int64 = size(t, 2)
+
+    # Number of transactions
+    n::Int64 = size(t, 1)
+	
+	# Number of rules
+    L = size(rules)[1]
+		
+	p = zeros(n, L)
+	
+	# For each transaction and each rule
+	for i in 1:n
+		for l in 1:L
+		# If rule l applies to transaction i
+		# i.e., if the vector t_i - r_l does not contain any negative value
+			if !any(x->(x<-epsilon), [sum(t[i, k]-rules[l, k+1]) for k in 1:d])
+
+				# If rule l correctly classifies transaction i
+				if transactionClass[i, 1] == rules[l, 1]
+					p[i, l] = 1
+				else
+					p[i, l] = -1 
+				end
+			end
+		end
+	end
+	return p
+end
+
+
+
 
 """
 Compute for a given data set the precision and the recall of 
