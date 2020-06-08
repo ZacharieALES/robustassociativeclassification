@@ -77,21 +77,21 @@ function createFeatures(dataFolder::String, dataSet::String)
             # Detailed description of the command:
             # - create in DataFrame "features" a column named "Sex"
             # - for each row of index i of "rawData", if column "Sex" is equal to "female", set the value of column "Sex" in row i of features to 1; otherwise set it to 0
-            #features.Sex = ifelse.(rawData.Sex .== "female", 1, 0)
+            features.Sex = ifelse.(rawData.Sex .== "female", 1, 0)
             
             # Add columns related to the passenger class
             # -> 3 columns (class 1, class 2 and class 3)
             
             # For each existing value in the column "Pclass"
-            #for a in sort(unique(rawData.Pclass))
+            for a in sort(unique(rawData.Pclass))
 
                 # Create 1 feature column named "Class1", "Class2" or "Class3"
-                #features[!, Symbol("Class", a)] = ifelse.(rawData.Pclass .<= a, 1, 0)
-            #end
+                features[!, Symbol("Class", a)] = ifelse.(rawData.Pclass .<= a, 1, 0)
+            end
 
             # Add a column related  to the number of relatives
             # -> 1 column (0: no relatives, 1: at least one relative)
-            #features.Relative = ifelse.(rawData[!, Symbol("Siblings/Spouses Aboard")] + rawData[!, Symbol("Parents/Children Aboard")] .> 0, 1, 0)
+            features.Relative = ifelse.(rawData[!, Symbol("Siblings/Spouses Aboard")] + rawData[!, Symbol("Parents/Children Aboard")] .> 0, 1, 0)
 
 
         end
