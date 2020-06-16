@@ -1,6 +1,7 @@
 # Tolerance
 epsilon = 0.0001
 
+include("structs.jl")
 """
 Function used to transform a column with numerical values into one or several binary columns.
 
@@ -128,22 +129,22 @@ function createFeatures(dataFolder::String, dataSet::String)
             # -> 3 columns (RestingECG1, RestingECG2 and RestingECG3)
             
 			# For each existing value in the column "RestingECGResults"
-            for a in sort(unique(rawData.RestingECGResults))
+            #for a in sort(unique(rawData.RestingECGResults))
 
                 # Create 1 feature column named "Class1", "Class2" or "Class3"
-                features[!, Symbol("RestingECG", a)] = ifelse.(rawData.RestingECGResults .== a, 1, 0)
-            end
+                #features[!, Symbol("RestingECG", a)] = ifelse.(rawData.RestingECGResults .== a, 1, 0)
+            #end
 			
 			#createColumns(:MaximumHeartRate, [0, 150, 160, 170, 180, Inf], rawData, features)
-			createColumns(:MaximumHeartRate, [0, 160, 180, Inf], rawData, features)
-			#features.ExerciseInducedAngina = rawData.ExerciseInducedAngina
-			createColumns(:Oldpeak, [0, 0.8, 1.8, 6.8], rawData, features)
+			#createColumns(:MaximumHeartRate, [0, 160, 180, Inf], rawData, features)
+			features.ExerciseInducedAngina = rawData.ExerciseInducedAngina
+			#createColumns(:Oldpeak, [0, 0.8, 1.8, 6.8], rawData, features)
 			
 			# Add columns related to the slope of the peak exercise ST segment
             # -> 3 columns (STSlope1, STSlope2 and STSlope3)
             
 			# For each existing value in the column "STSlope"
-            #for a in sort(unique(rawData.STSlope))
+           # for a in sort(unique(rawData.STSlope))
 
                 # Create 1 feature column named "Class1", "Class2" or "Class3"
                 #features[!, Symbol("STSlope", a)] = ifelse.(rawData.STSlope .<= a, 1, 0)
@@ -161,9 +162,9 @@ function createFeatures(dataFolder::String, dataSet::String)
 			
 			# Add columns related to the thal
             # -> 3 columns (normal, fixed defect, reversable defect)
-   			#features[!, Symbol("NormalThal")] = ifelse.(rawData.Thal .== 3, 1, 0)
-			#features[!, Symbol("FixedDefectThal")] = ifelse.(rawData.Thal .== 6, 1, 0)
-            #features[!, Symbol("ReversableDefectThal")] = ifelse.(rawData.Thal .== 7, 1, 0)
+			 #features[!, Symbol("NormalThal")] = ifelse.(rawData.Thal .== 3, 1, 0)
+			 #features[!, Symbol("FixedDefectThal")] = ifelse.(rawData.Thal .== 6, 1, 0)
+       #features[!, Symbol("ReversableDefectThal")] = ifelse.(rawData.Thal .== 7, 1, 0)
 		end
 		
         
@@ -180,8 +181,8 @@ function createFeatures(dataFolder::String, dataSet::String)
 		# Split them between train and test
 		featuresC0=features[features[:,1] .== 0, :]
 		featuresC1=features[features[:,1] .== 1, :]
-		LimitC0 = trunc(Int, size(featuresC0, 1) * 1/2)
-		LimitC1 = trunc(Int, size(featuresC1, 1) * 1/2)
+		LimitC0 = trunc(Int, size(featuresC0, 1) * 2/3)
+		LimitC1 = trunc(Int, size(featuresC1, 1) * 2/3)
 		if(mod(LimitC0,2) !=0)
 			LimitC0+=mod(LimitC0,2)
 		end
@@ -359,7 +360,6 @@ end
 
 """
 Sort the rules
-
 Arguments
   - dataSet: name of the dataset folder
   - resultsFolder: name of the folder in which the results are written
@@ -377,6 +377,10 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
 		
 		#number of train data sets
 		nb=2
+		
+		#Type of variables (continuous / Integer)
+		#typeVar= 0 #continuous
+		typeVar= 1 #Integer
 		
 		#proximity approach
 		#approach=1
@@ -440,33 +444,67 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
         m = Model(with_optimizer(CPLEX.Optimizer))
         set_parameter(m, "CPX_PARAM_TILIM", tilim)
         
-        # u^q_il: rule l is the highest which applies to transaction i in train data set q
-        @variable(m, u[1:n, 1:L, 1:nb], Bin)
+        #Integer variables
+		if(typeVar == 1)
 		
-        # r^q_l: rank of rule l in train data set q
-        @variable(m, 1 <= r[1:L, 1:nb] <= L, Int)
+			# u^q_il: rule l is the highest which applies to transaction i in train data set q
+			@variable(m, u[1:n, 1:L, 1:nb], Bin)
+			
+			# r^q_l: rank of rule l in train data set q
+			@variable(m, 1 <= r[1:L, 1:nb] <= L, Int)
 
-        # rstar^q: rank of the highest null rule in train data set q
-        @variable(m, 1 <= rstar[1:nb] <= L)
-        @variable(m, 1 <= rB[1:nb] <= L)
+			# rstar^q: rank of the highest null rule in train data set q
+			@variable(m, 1 <= rstar[1:nb] <= L)
+			@variable(m, 1 <= rB[1:nb] <= L)
 
-        # g^q_i: rank of the highest rule which applies to transaction i in train data set q
-        @variable(m, 1 <= g[1:n, 1:nb] <= L, Int)
-		
-        # s^q_lk: rule l is assigned to rank k in train data set q
-        @variable(m, s[1:L, 1:L,1:nb], Bin)
-		
-		
-        # Rank of null rules in each train data set q
-        rA = r[1, :]
-        rB = r[2, :]
+			# g^q_i: rank of the highest rule which applies to transaction i in train data set q
+			@variable(m, 1 <= g[1:n, 1:nb] <= L, Int)
+			
+			# s^q_lk: rule l is assigned to rank k in train data set q
+			@variable(m, s[1:L, 1:L,1:nb], Bin)
+			
+			
+			# Rank of null rules in each train data set q
+			rA = r[1, :]
+			rB = r[2, :]
 
 
-        # rstar^q == rB^q?
-        @variable(m, alpha[1:nb], Bin)
+			# rstar^q == rB^q?
+			@variable(m, alpha[1:nb], Bin)
+			
+			# rstar^q == rA^q?
+			@variable(m, 0 <= beta[1:nb] <= 1)
+		#Continuous variables
+		else 
 		
-        # rstar^q == rA^q?
-        @variable(m, 0 <= beta[1:nb] <= 1)
+			# u^q_il: rule l is the highest which applies to transaction i in train data set q
+			@variable(m,  u[1:n, 1:L, 1:nb])
+			
+			# r^q_l: rank of rule l in train data set q
+			@variable(m, 1 <= r[1:L, 1:nb] <= L)
+
+			# rstar^q: rank of the highest null rule in train data set q
+			@variable(m, 1 <= rstar[1:nb] <= L)
+			@variable(m, 1 <= rB[1:nb] <= L)
+
+			# g^q_i: rank of the highest rule which applies to transaction i in train data set q
+			@variable(m, 1 <= g[1:n, 1:nb] <= L)
+			
+			# s^q_lk: rule l is assigned to rank k in train data set q
+			@variable(m, 0 <= s[1:L, 1:L,1:nb] <= 1)
+			
+			
+			# Rank of null rules in each train data set q
+			rA = r[1, :]
+			rB = r[2, :]
+
+
+			# rstar^q == rB^q?
+			@variable(m, 0 <= alpha[1:nb] <=1)
+			
+			# rstar^q == rA^q?
+			@variable(m, 0 <= beta[1:nb] <= 1)
+		end
 
         # Maximize the classification accuracy for each train data set q
         @objective(m, Max, sum(p[i, l, 1] * u[i, l, 1] for i in 1:n for l in 1:L)
@@ -521,14 +559,32 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
 			@constraint(m, [i in 1:L, j in 1:L], x[i, j] <= x2[i, j] )
 			@constraint(m, sum(x[i, j] for i in 1:L for j in 1:L) <= 2 * L)
 		else
+			
 			#Second approach
-			@variable(m, 0 <= y[1:L] <= L-1, Int)
+			if(typeVar ==1)
+				@variable(m, 0 <= y[1:L] <= L-1, Int)
+			else 
+				@variable(m, 0 <= y[1:L] <= L-1)
+			end
 			@constraint(m, [i in 1:L], y[i]  >= r[i, 1]-r[i, 2])
 			@constraint(m, [i in 1:L], y[i]  >= r[i, 2]-r[i, 1])
 			@constraint(m, sum(y[i] for i in 1:L ) <= 2 * L)
 		end
 			
+        # Start a chronometer
+        start = time()
+		
         status = optimize!(m)
+	
+		duration= time()-start
+		
+		
+		optimal = false
+		if termination_status(m) == MOI.OPTIMAL
+			optimal= true
+		end
+		
+		gap= abs(JuMP.objective_bound(m) - JuMP.objective_value(m)) / JuMP.objective_value(m)
 
         ###############
         # Write the rstar highest ranked rules and their corresponding class
@@ -558,8 +614,7 @@ function sortRules(dataSet::String, resultsFolder::String, train::DataFrames.Dat
 		orderedRules2 = CSV.read(orderedRulesPath2)
     end 
 
-    #return orderedRules
-
+    return orderedRules1, orderedRules2, optimal, gap, duration
 end
 
 
@@ -595,18 +650,15 @@ function createPi(t::DataFrames.DataFrame, rules::DataFrames.DataFrame, transact
 	return p
 end
 
-
-
-
 """
 Compute for a given data set the precision and the recall of 
 - each class
 - the whole data set (with and without weight for each class)
-
 Arguments
   - orderedRules: list of rules of the classifier (1st row = 1st rule to test)
   - dataset: the data set (1 row = 1 individual)
 """
+
 function showStatistics(orderedRules::DataFrames.DataFrame, dataSet::DataFrames.DataFrame)
 
     
@@ -667,4 +719,29 @@ function showStatistics(orderedRules::DataFrames.DataFrame, dataSet::DataFrames.
     println("avg\t", round((precision[1] + precision[2])/2, digits=2), "\t", round((recall[1] + recall[2])/2, digits=2))
     println("w. avg\t", round(precision[1] * classSize[1] / size(dataSet, 1) + precision[2] * classSize[2] / size(dataSet, 1), digits = 2), "\t", round(recall[1] * classSize[1] / size(dataSet, 1) + recall[2] * classSize[2] / size(dataSet, 1), digits = 2), "\n")
     
+	return precision, recall
 end 
+
+"""
+Save the results of the resolution in a results.txt file that contains
+- the duration
+- the gap
+- true if the solution is optimal 
+-  the precision and the recall of each class and the whole data set
+Arguments
+  - dataSet: name of the data set (ex: "titanic")
+  -resultsFolder: name of the folser in which the rules will be written
+  - myResults: a struct that contains all the informations that will be saved in the file
+"""
+
+function saveResults(dataSet::String, resultsFolder::String, myResults:: Results)
+	
+	ResultsPath=resultsFolder * dataSet * "_results.txt"
+	if !isfile(ResultsPath) 
+		myFile = open(ResultsPath, "w")
+		println(myFile, myResults)
+		close(myFile)
+	else
+		println("=== Warning: Previous Results found")
+    end   
+end
