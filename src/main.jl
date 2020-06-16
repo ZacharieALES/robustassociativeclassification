@@ -5,6 +5,7 @@ using DataFrames
 using Random
 
 include("functions.jl")
+include("structs.jl")
 
 dataSet = "heart"
 dataFolder = "../data/"
@@ -29,10 +30,30 @@ rules = createRules(dataSet, resultsFolder, train)
 # - read the file ./data/kidney_rules.csv
 # - save the rules in ./res/kidney_ordered_rules.csv
 timeLimitInSeconds = 300
-orderedRules = sortRules(dataSet, resultsFolder, train, rules, timeLimitInSeconds)
+orderedRules1, orderedRules2, optimal, gap, duration  = sortRules(dataSet, resultsFolder, train, rules, timeLimitInSeconds)
 
+nb=2
+trainPrecision = zeros(2, nb)
+trainRecall = zeros(2, nb)
+testPrecision = zeros(2, nb)
+testRecall = zeros(2, nb)
+
+println("------------------ First order-----------------", "\n")
 println("-- Train results")
-showStatistics(orderedRules, train)
+trainPrecision[:, 1], trainRecall[:, 1] = showStatistics(orderedRules1, train)
 
 println("-- Test results")
-showStatistics(orderedRules, test)
+testPrecision[:, 1], testRecall[:, 1] = showStatistics(orderedRules1, test)
+println(" ")
+println("------------------ Second order-----------------","\n")
+
+println("-- Train results")
+trainPrecision[:, 2], trainRecall[:, 2] = showStatistics(orderedRules2, train)
+
+println("-- Test results")
+testPrecision[:, 2], testRecall[:, 2] = showStatistics(orderedRules2, test)
+
+
+
+myResults=Results(duration, gap, optimal, train, test, testPrecision, testRecall, trainPrecision, trainRecall)
+saveResults(dataSet, resultsFolder, myResults)
